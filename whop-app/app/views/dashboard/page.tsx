@@ -1,16 +1,13 @@
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { db } from '@/lib/db'
 
 async function getMetrics() {
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-  const [failedCount7d, recoveredCount7d, clickRecoveries, windowRecoveries, recent] = await Promise.all([
-    prisma.event.count({ where: { status: 'failed', occurredAt: { gte: since } } }),
-    prisma.event.count({ where: { recovered: true, occurredAt: { gte: since } } }),
-    prisma.event.count({ where: { recovered: true, reason: 'click', occurredAt: { gte: since } } }),
-    prisma.event.count({ where: { recovered: true, reason: 'window', occurredAt: { gte: since } } }),
-    prisma.event.findMany({ where: { status: 'failed' }, orderBy: { occurredAt: 'desc' }, take: 20 })
-  ])
+  const since = Date.now() - 7 * 24 * 60 * 60 * 1000
+  const ev = db.events
+  const failedCount7d = ev.filter(e => e.type?.includes('failed') && new Date(e.occurredAt).getTime() >= since).length
+  const recoveredCount7d = ev.filter(e => e.recovered && new Date(e.occurredAt).getTime() >= since).length
+  const clickRecoveries = ev.filter(e => e.recovered && e.reason === 'click' && new Date(e.occurredAt).getTime() >= since).length
+  const windowRecoveries = ev.filter(e => e.recovered && e.reason === 'window' && new Date(e.occurredAt).getTime() >= since).length
+  const recent = ev.filter(e => e.type?.includes('failed')).sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()).slice(0, 20)
   return { failedCount7d, recoveredCount7d, clickRecoveries, windowRecoveries, recent }
 }
 
