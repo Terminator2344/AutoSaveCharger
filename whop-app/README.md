@@ -1,6 +1,7 @@
-This is a template for a whop app built in NextJS. Fork it and keep the parts you need for your app.
+Auto-Charge Saver — Whop App (Next.js)
 
-# Whop NextJS App Template
+What this app does
+- Reduces involuntary churn by notifying users when payments fail and tracking recoveries (click vs window). Includes iframe-ready dashboard and webhook handling.
 
 To run this project:
 
@@ -12,11 +13,32 @@ To run this project:
 	- Ensure the "Dashboard path" is set to `/dashboard/[companyId]`
 	- Ensure the "Discover path" is set to `/discover`
 
-3. Copy the environment variables from the `.env.development` into a `.env.local`. Ensure to use real values from the whop dashboard.
+3. Copy `env.example` to `.env.local` and fill values from your Whop dashboard.
 
 4. Go to a whop created in the same org as the app you created. Navigate to the tools section and add your app.
 
 5. Run `pnpm dev` to start the dev server. Then in the top right of the window find a translucent settings icon. Select "localhost". The default port 3000 should work.
+
+## Environment
+
+Required variables (see `env.example`):
+- `APP_BASE_URL`, `NEXT_PUBLIC_WHOP_CLIENT_ID`, `WHOP_CLIENT_SECRET`, `WHOP_API_KEY`, `WHOP_REDIRECT_URI`
+- `NEXTAUTH_URL`, `NEXTAUTH_SECRET`
+- `DATABASE_URL` (dev default: SQLite)
+- Optional: `RESEND_API_KEY`, `TELEGRAM_BOT_TOKEN`, `DISCORD_WEBHOOK_URL`
+
+## Prisma
+
+```
+pnpm dlx prisma generate
+pnpm dlx prisma migrate dev --name init
+```
+
+## Routes
+- `POST /api/webhooks` — Whop webhooks (validated via SDK), persists events, triggers notifications and recovery marking.
+- `GET /api/r/[userId]` — click tracking + redirect to Whop billing URL.
+- `ANY /api/whop/dev-proxy` — dev proxy stub.
+- `GET /views/dashboard` — iframe-safe dashboard (frosted UI) with metrics.
 
 ## Deploying
 
