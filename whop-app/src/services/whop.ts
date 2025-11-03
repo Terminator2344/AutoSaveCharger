@@ -17,6 +17,11 @@ export function getBillingUpdateUrl(meta: any): string {
   return meta.billing_url || meta.renewal_url || meta.update_url || '#'
 }
 
+// Stub with userId signature (compat)
+export async function getBillingUpdateUrlForUser(userId: string) {
+  return `https://whop.com/users/${userId}/billing`
+}
+
 export async function exchangeOAuthCodeForToken(): Promise<void> {
   // Handled by template SDK / NextAuth; left as stub if needed.
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { insert } from "@/lib/db";
-import { notifyPaymentFailed, markRecoveredOnSuccess } from "@/src/services/notifications";
+import { notifyPaymentFailed, markRecoveredOnSuccess } from "@/services/notifications";
 
 export async function POST(req: Request) {
   const body = await req.json();

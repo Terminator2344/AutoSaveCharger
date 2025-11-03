@@ -17,4 +17,15 @@ export async function markRecoveredOnSuccess(evt: any) {
   return evt;
 }
 
+// Stub signatures for compatibility
+export async function notifyPaymentFailedPositional(userId: string, channel: string) {
+  console.log(`⚠️ Payment failed — notifying ${channel} for user ${userId}`)
+  return true
+}
+
+export async function markRecoveredOnSuccessPositional(userId: string, reason: string) {
+  console.log(`✅ Recovery marked for ${userId}, reason=${reason}`)
+  return true
+}
+
 
