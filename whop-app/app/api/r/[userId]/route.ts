@@ -1,16 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { recordClick, getLastFailedEvent } from '@/src/services/click'
-import { getBillingUpdateUrl } from '@/src/services/whop'
+import { NextResponse } from "next/server";
+import { recordClick, getLastFailedEvent } from "@/src/services/click";
 
-export async function GET(req: NextRequest, { params }: { params: { userId: string } }) {
-  const url = new URL(req.url)
-  const channel = url.searchParams.get('c') || 'unknown'
-  const messageId = url.searchParams.get('m')
-  await recordClick({ userId: params.userId, channel, messageId: messageId ?? undefined })
-  const last = await getLastFailedEvent(params.userId)
-  const billing = getBillingUpdateUrl(last?.meta)
-  if (!billing || billing === '#') return new Response('No billing URL available yet.', { status: 200, headers: { 'Content-Type': 'text/plain' } })
-  return NextResponse.redirect(billing, { status: 302 })
+export async function GET(req: Request, { params }: any) {
+  const { userId } = params;
+  const url = new URL(req.url);
+  const c = url.searchParams.get("c");
+  const m = url.searchParams.get("m");
+
+  await recordClick({ userId, channel: c, messageId: m });
+  const evt = await getLastFailedEvent(userId);
+  const redirectUrl = evt?.billing_url || "#";
+
+  if (redirectUrl === "#") return new NextResponse("No billing URL available yet.");
+  return NextResponse.redirect(redirectUrl);
 }
 
 

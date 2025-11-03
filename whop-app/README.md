@@ -27,12 +27,7 @@ Required variables (see `env.example`):
 - `DATABASE_URL` (dev default: SQLite)
 - Optional: `RESEND_API_KEY`, `TELEGRAM_BOT_TOKEN`, `DISCORD_WEBHOOK_URL`
 
-## Prisma
-
-```
-pnpm dlx prisma generate
-pnpm dlx prisma migrate dev --name init
-```
+This version uses a temporary in-memory store (no database). Data resets on restart.
 
 ## Routes
 - `POST /api/webhooks` — Whop webhooks (validated via SDK), persists events, triggers notifications and recovery marking.

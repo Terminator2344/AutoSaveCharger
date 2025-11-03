@@ -1,17 +1,11 @@
-import { PrismaClient } from '@prisma/client'
+import { db, insert, findOne } from "@/lib/db";
 
-const prisma = new PrismaClient()
-
-export async function recordClick(input: { userId: string; channel: string; messageId?: string | null }) {
-  await prisma.click.create({ data: {
-    userId: input.userId,
-    channel: input.channel,
-    messageId: input.messageId ?? undefined
-  } })
+export async function recordClick({ userId, channel, messageId }: any) {
+  return insert("clicks", { id: Date.now().toString(), userId, channel, messageId, clickedAt: new Date() });
 }
 
 export async function getLastFailedEvent(userId: string) {
-  return prisma.event.findFirst({ where: { userId, status: 'failed' }, orderBy: { occurredAt: 'desc' } })
+  return findOne("events", (e) => e.userId === userId && e.type.includes("failed"));
 }
 
 

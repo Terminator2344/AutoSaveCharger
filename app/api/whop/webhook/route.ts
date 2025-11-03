@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyWebhookSignature } from '@/src/services/whop'
 import { PrismaClient } from '@prisma/client'
+import { markRecoveryIfClickedRecently } from '@/src/services/click'
 
 const prisma = new PrismaClient()
 
@@ -30,6 +31,9 @@ export async function POST(req: NextRequest) {
     } })
   } catch (e: any) {
     if (!String(e?.message).includes('Unique constraint')) throw e
+  }
+  if (inferStatus(type) === 'succeeded' && payload?.data?.user_id) {
+    await markRecoveryIfClickedRecently(payload.data.user_id)
   }
   return NextResponse.json({ received: true })
 }
