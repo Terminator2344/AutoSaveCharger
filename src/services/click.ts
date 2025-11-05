@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { buildWhopBillingUrlFromMeta } from '@/src/services/whop'
+import { buildWhopBillingUrlFromMeta } from './whop'
 
 const prisma = new PrismaClient()
 

@@ -1,0 +1,45 @@
+// Prisma schema for Auto-Charge Saver analytics
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id           String   @id @default(cuid())
+  type         String   // payment_failed, payment_succeeded, payment_recovered
+  occurredAt   DateTime @default(now())
+  userEmail    String?
+  whopUserId   String?
+  recovered    Boolean  @default(false)
+  reason       String?
+  channel      String?
+  amountCents  Int?
+}
+
+model Click {
+  id         String   @id @default(cuid())
+  userId     String
+  channel    String
+  messageId  String?
+  clickedAt  DateTime @default(now())
+}
+
+model MetricSnapshot {
+  id               String   @id @default(cuid())
+  createdAt        DateTime @default(now())
+  failed           Int
+  recovered        Int
+  recoveredClick   Int
+  recoveredWindow  Int
+  avgRecovery      Float
+  totalRevenue     Int
+  totalClicks      Int
+  topChannel       String?
+}
+
+

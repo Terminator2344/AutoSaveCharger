@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { recordClick, deriveBillingRedirect } from '@/src/services/click'
+import { recordClick, deriveBillingRedirect } from '../../../../src/services/click';
+
+
 
 export async function GET(req: NextRequest, { params }: { params: { userId: string } }) {
   const url = new URL(req.url)

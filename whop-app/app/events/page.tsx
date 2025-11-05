@@ -1,16 +1,10 @@
 import { headers } from "next/headers";
 import { whopsdk } from "@/lib/whop-sdk";
 import Layout from "@/app/views/Layout";
-import DashboardView from "@/app/views/DashboardView";
+import EventsView from "@/app/views/EventsView";
 import type { Company, User, Access } from "@/app/views/types";
 
-export default async function DashboardPage({
-  params,
-}: {
-  params: Promise<{ companyId?: string }>;
-}) {
-  const { companyId } = await params;
-
+export default async function EventsPage() {
   // Проверяем наличие токена пользователя из Whop
   let userId: string | null = null;
   let devMode = false;
@@ -22,19 +16,26 @@ export default async function DashboardPage({
     console.warn("⚠️ Dev mode: Whop iframe not detected.");
   }
 
-  // Если пользователь авторизован — загружаем данные
-  const [company, user, access] = userId && companyId
+  // Если пользователь авторизован — пытаемся получить данные
+  const [company, user, access] = userId
     ? await Promise.all([
-        whopsdk.companies.retrieve(companyId),
+        whopsdk.users.retrieve(userId).then(async (u) => {
+          try {
+            const companyId = (u as any)?.company_id;
+            return companyId ? await whopsdk.companies.retrieve(companyId) : null;
+          } catch {
+            return null;
+          }
+        }),
         whopsdk.users.retrieve(userId),
-        whopsdk.users.checkAccess(companyId, { id: userId }),
+        Promise.resolve(null),
       ])
     : [null, null, null];
 
-  // Возвращаем основной макет и дашборд
+  // Возвращаем основной макет и events view
   return (
     <Layout devMode={devMode}>
-      <DashboardView
+      <EventsView
         company={company as Company | null}
         user={user as User | null}
         access={access as Access | null}
@@ -42,3 +43,6 @@ export default async function DashboardPage({
     </Layout>
   );
 }
+
+
+

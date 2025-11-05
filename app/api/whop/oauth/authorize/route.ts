@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { env } from '@/src/config/env'
+import { env } from '@/config/env'
 
 export async function GET() {
   const state = crypto.randomUUID()
