@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { sendTelegram } from '@/integrations/telegram';
+import { sendDiscord } from '@/integrations/discord';
+import { sendEmail } from '@/integrations/email';
 
 export async function POST(req: Request) {
   const data = await req.json();
@@ -10,7 +13,7 @@ export async function POST(req: Request) {
   try {
     switch (eventType) {
       case 'payment_failed': {
-        await prisma.event.create({
+        const created = await prisma.event.create({
           data: {
             type: 'payment_failed',
             userEmail: payload?.user?.email ?? null,
@@ -21,11 +24,26 @@ export async function POST(req: Request) {
             channel: payload?.channel ?? 'email',
           },
         });
+        // fire-and-forget notifications
+        try {
+          const amountCents = created.amountCents ?? 0;
+          const channel = created.channel ?? '—';
+          const type = created.type;
+          const msg = `💸 ${type} | ${channel} | $${(amountCents / 100).toFixed(2)}`;
+          const tgChat = process.env.TELEGRAM_CHAT_ID;
+          await Promise.allSettled([
+            tgChat ? sendTelegram({ chatId: tgChat, text: msg }) : Promise.resolve({ ok: true }),
+            sendDiscord({ text: msg }),
+            created.userEmail ? sendEmail({ to: created.userEmail, subject: 'New Event', html: `Type: ${type}, Amount: $${(amountCents / 100).toFixed(2)}` }) : Promise.resolve({ ok: true }),
+          ]);
+        } catch (e) {
+          console.warn('Notification error (ignored):', e);
+        }
         break;
       }
       case 'payment_succeeded':
       case 'payment_recovered': {
-        await prisma.event.create({
+        const created = await prisma.event.create({
           data: {
             type: eventType,
             userEmail: payload?.user?.email ?? null,
@@ -36,6 +54,20 @@ export async function POST(req: Request) {
             channel: payload?.channel ?? null,
           },
         });
+        try {
+          const amountCents = created.amountCents ?? 0;
+          const channel = created.channel ?? '—';
+          const type = created.type;
+          const msg = `💸 ${type} | ${channel} | $${(amountCents / 100).toFixed(2)}`;
+          const tgChat = process.env.TELEGRAM_CHAT_ID;
+          await Promise.allSettled([
+            tgChat ? sendTelegram({ chatId: tgChat, text: msg }) : Promise.resolve({ ok: true }),
+            sendDiscord({ text: msg }),
+            created.userEmail ? sendEmail({ to: created.userEmail, subject: 'New Event', html: `Type: ${type}, Amount: $${(amountCents / 100).toFixed(2)}` }) : Promise.resolve({ ok: true }),
+          ]);
+        } catch (e) {
+          console.warn('Notification error (ignored):', e);
+        }
         break;
       }
       default: {

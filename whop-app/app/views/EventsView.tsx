@@ -29,46 +29,19 @@ export default function EventsView({
   const [remoteEvents, setRemoteEvents] = useState<Event[]>([]);
 
   useEffect(() => {
-    fetch('/api/events')
-      .then((r) => r.json())
-      .then((list) => setRemoteEvents(list))
-      .catch(() => void 0);
+    const load = () =>
+      fetch('/api/events')
+        .then((r) => r.json())
+        .then((list) => setRemoteEvents(list))
+        .catch(() => void 0);
+    load();
+    const t = setInterval(load, 10000);
+    return () => clearInterval(t);
   }, []);
 
-  const displayEvents =
-    (remoteEvents && remoteEvents.length > 0)
-      ? remoteEvents
-      : (events.length > 0
-      ? events
-      : [
-          {
-            occurredAt: new Date('2025-11-05T12:45:00'),
-            type: 'payment_failed',
-            user: { email: 'andrew@example.com' },
-            recovered: false,
-            reason: 'Card expired',
-            channel: 'email',
-            amountCents: 4999,
-          },
-          {
-            occurredAt: new Date('2025-11-04T15:30:00'),
-            type: 'payment_succeeded',
-            user: { email: 'john@example.com' },
-            recovered: true,
-            reason: 'click',
-            channel: 'telegram',
-            amountCents: 7900,
-          },
-          {
-            occurredAt: new Date('2025-11-03T10:10:00'),
-            type: 'payment_failed',
-            user: { email: 'kate@example.com' },
-            recovered: false,
-            reason: 'Insufficient funds',
-            channel: 'discord',
-            amountCents: 12000,
-          },
-        ]);
+  const displayEvents = (remoteEvents && remoteEvents.length > 0)
+    ? remoteEvents
+    : (events.length > 0 ? events : []);
 
   const filtered = displayEvents.filter((e) => {
     const typeOk = eventType === 'all' || e.type === eventType;
@@ -137,7 +110,7 @@ export default function EventsView({
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((e, i) => (
+                {filtered.map((e: any, i) => (
                   <tr key={i} className="border-t border-amber-500/10 hover:bg-[#1a120b]/40 transition-all duration-200">
                     <td className="py-3 px-5 text-amber-200/80 font-mono text-xs">
                       {new Date(e.occurredAt).toLocaleString('en-US', {
@@ -149,9 +122,9 @@ export default function EventsView({
                       })}
                     </td>
                     <td>
-                      <span className={`type-badge type-${e.type}`}>{e.type.replace(/_/g, ' ')}</span>
+                      <span className={`type-badge type-${e.type}`}>{String(e.type).replace(/_/g, ' ')}</span>
                     </td>
-                    <td className="px-5">{e.user?.email || e.user?.whopUserId || '-'}</td>
+                    <td className="px-5">{e.user?.email || e.userEmail || e.user?.whopUserId || e.whopUserId || '-'}</td>
                     <td className="px-5">
                       {e.recovered ? (
                         <span className="badge badge-success">Recovered</span>
@@ -168,7 +141,7 @@ export default function EventsView({
                     </td>
                     <td className="px-5 font-semibold capitalize text-amber-200/90">{e.channel || '-'}</td>
                     <td className="px-5 text-right text-amber-400 font-semibold">
-                      {e.amountCents ? `$${(e.amountCents / 100).toFixed(2)}` : '-'}
+                      {typeof e.amountCents === 'number' ? `$${(e.amountCents / 100).toFixed(2)}` : '-'}
                     </td>
                   </tr>
                 ))}
