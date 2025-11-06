@@ -178,12 +178,14 @@ export async function aggregateEvents(where: {
 }
 
 export async function groupByChannel(where: {
+  userId?: string;
   channel?: { not: null };
   occurredAt?: { gte?: Date; lt?: Date };
 }) {
   // Fetch all matching events and group in JS
   let query = supabaseAdmin.from('event').select('channel');
 
+  if (where.userId) query = query.eq('userId', where.userId);
   if (where.channel && typeof where.channel === 'object' && 'not' in where.channel) {
     query = query.not('channel', 'is', null);
   }

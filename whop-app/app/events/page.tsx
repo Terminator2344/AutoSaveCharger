@@ -35,14 +35,11 @@ export default async function EventsPage() {
   // Возвращаем основной макет и events view
   return (
     <Layout devMode={devMode}>
-      <EventsView
-        company={company as Company | null}
-        user={user as User | null}
-        access={access as Access | null}
-      />
+      <EventsView />
     </Layout>
   );
 }
+
 
 
 

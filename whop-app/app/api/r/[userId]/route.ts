@@ -8,10 +8,9 @@ export async function GET(req: Request, { params }: any) {
   const m = url.searchParams.get("m");
 
   await recordClick({ userId, channel: c, messageId: m });
-  const evt = await getLastFailedEvent(userId);
-  const redirectUrl = evt?.billing_url || "#";
+  const redirectUrl = await deriveBillingRedirect(userId);
 
-  if (redirectUrl === "#") return new NextResponse("No billing URL available yet.");
+  if (!redirectUrl || redirectUrl === "#") return new NextResponse("No billing URL available yet.");
   return NextResponse.redirect(redirectUrl);
 }
 

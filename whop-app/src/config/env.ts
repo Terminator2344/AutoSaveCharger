@@ -2,11 +2,11 @@ import { z } from 'zod'
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  APP_BASE_URL: z.string().url(),
-  NEXT_PUBLIC_WHOP_CLIENT_ID: z.string().min(1),
-  WHOP_CLIENT_SECRET: z.string().min(1),
+  APP_BASE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_WHOP_CLIENT_ID: z.string().min(1).optional(),
+  WHOP_CLIENT_SECRET: z.string().min(1).optional(),
   WHOP_API_KEY: z.string().optional(),
-  WHOP_REDIRECT_URI: z.string().url(),
+  WHOP_REDIRECT_URI: z.string().url().optional(),
   NEXTAUTH_URL: z.string().url().optional(),
   NEXTAUTH_SECRET: z.string().optional(),
   DATABASE_URL: z.string().min(1).optional(),
