@@ -4,7 +4,9 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
+  engineType = "client"        // ✅ включаем JS-движок (без Rust бинарников)
+  output     = "app/generated/prisma/client"
 }
 
 model User {
@@ -48,5 +50,3 @@ model Click {
   messageId  String?
   clickedAt  DateTime @default(now())
 }
-
-
