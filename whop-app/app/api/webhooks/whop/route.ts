@@ -25,9 +25,11 @@ export async function POST(req: Request) {
           email: payload?.user?.email ?? null,
           recovered: false,
           reason: payload?.reason ?? null,
-          amountCents: payload?.amount_cents ?? null,
+          amountCents: Number(payload?.amount_cents ?? 0),
+
           channel: payload?.channel ?? 'email',
-          occurredAt: new Date().toISOString(),
+          occurredAt: payload?.occurredAt ?? new Date().toISOString(),
+
         });
         console.log('✅ Event inserted successfully:', created);
         // fire-and-forget notifications
@@ -118,7 +120,8 @@ await new Promise((resolve) => setTimeout(resolve, 4000));
           amountCents: payload?.amount_cents ?? payload?.amountCents ?? null,
 
           channel: payload?.channel ?? null,
-          occurredAt: new Date().toISOString(),
+          occurredAt: payload?.occurredAt ?? new Date().toISOString(),
+
         });
         console.log('✅ Event inserted successfully:', created);
         try {

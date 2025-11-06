@@ -2,31 +2,26 @@
 import { useEffect, useState } from 'react';
 
 interface Event {
+  id?: string;
   occurredAt: string | Date;
-  type: string;
-  user?: { email?: string; whopUserId?: string };
-  recovered: boolean;
-  reason?: string | null;
-  channel?: string;
-  amountCents?: number;
+  type: 'payment_failed' | 'payment_succeeded' | 'subscription_cancelled' | string;
+  userEmail?: string | null;
+  userId?: string | null;
+  amountCents?: number | null;
 }
 
 interface EventsViewProps {
   events?: Event[];
   availableTypes?: string[];
-  availableChannels?: string[];
-  page?: number;
 }
 
 export default function EventsView({
   events = [],
-  availableTypes = ['payment_failed', 'payment_succeeded', 'payment_recovered'],
-  availableChannels = ['email', 'telegram', 'discord'],
-  page = 1,
+  availableTypes = ['payment_failed', 'payment_succeeded', 'subscription_cancelled'],
 }: EventsViewProps) {
   const [eventType, setEventType] = useState('all');
-  const [channel, setChannel] = useState('all');
   const [remoteEvents, setRemoteEvents] = useState<Event[]>([]);
+  const [page, setPage] = useState<number>(1);
 
   useEffect(() => {
     const load = () =>
@@ -39,27 +34,42 @@ export default function EventsView({
     return () => clearInterval(t);
   }, []);
 
-  const displayEvents = (remoteEvents && remoteEvents.length > 0)
-    ? remoteEvents
-    : (events.length > 0 ? events : []);
+  // Pagination logic
+  const perPage = 25;
+  const start = (page - 1) * perPage;
+  const end = start + perPage;
 
-  const filtered = displayEvents.filter((e) => {
-    const typeOk = eventType === 'all' || e.type === eventType;
-    const chOk = channel === 'all' || e.channel === channel;
-    return typeOk && chOk;
-  });
+  const displayEvents = remoteEvents.length > 0 ? remoteEvents : events;
+  const filtered = displayEvents
+    .filter((e) => (eventType === 'all' ? true : e.type === eventType))
+    .sort(
+      (a, b) =>
+        new Date(b.occurredAt as any).getTime() - new Date(a.occurredAt as any).getTime()
+    );
+
+  const paged = filtered.slice(start, end);
+  const totalPages = Math.ceil(filtered.length / perPage);
 
   return (
-    <div className="min-h-screen text-amber-100 font-sans" style={{
-      background: `radial-gradient(circle at 20% 20%, rgba(255, 136, 0, 0.08) 0%, transparent 60%),
-                   radial-gradient(circle at 80% 80%, rgba(255, 85, 0, 0.06) 0%, transparent 60%),
-                   linear-gradient(to bottom, #0a0a0a 0%, #050505 100%)`
-    }}>
-      
+    <div
+      className="min-h-screen text-amber-100 font-sans"
+      style={{
+        background: `radial-gradient(circle at 20% 20%, rgba(255, 136, 0, 0.08) 0%, transparent 60%),
+                     radial-gradient(circle at 80% 80%, rgba(255, 85, 0, 0.06) 0%, transparent 60%),
+                     linear-gradient(to bottom, #0a0a0a 0%, #050505 100%)`,
+      }}
+    >
       <main className="max-w-6xl mx-auto px-8 py-12">
-        <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#ffcc66] via-[#ffaa00] to-[#ff8800] mb-8 drop-shadow-[0_0_20px_rgba(255,136,0,0.5)]">
-          Events
-        </h1>
+      <h1
+  style={{
+    fontSize: 'clamp(32px, 8vw, 32px)',
+    lineHeight: '1.1'
+  }}
+  className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#ffcc66] via-[#ffaa00] to-[#ff8800] mb-10 drop-shadow-[0_0_25px_rgba(255,136,0,0.6)]"
+>
+  Events
+</h1>
+
 
         <div className="flex flex-wrap items-center gap-4 mb-6">
           <label className="text-sm font-semibold text-amber-200 flex items-center gap-2">
@@ -77,25 +87,9 @@ export default function EventsView({
               ))}
             </select>
           </label>
-
-          <label className="text-sm font-semibold text-amber-200 flex items-center gap-2">
-            Channel:
-            <select
-              className="ml-2 bg-black/50 border border-amber-500/30 rounded-md px-3 py-2 text-amber-100 focus:border-[#ff8800] focus:shadow-[0_0_15px_rgba(255,136,0,0.3)] focus:outline-none transition-all"
-              value={channel}
-              onChange={(e) => setChannel(e.target.value)}
-            >
-              <option value="all">All Channels</option>
-              {availableChannels.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
 
-        {filtered.length > 0 ? (
+        {paged.length > 0 ? (
           <div className="overflow-x-auto rounded-2xl border border-amber-500/20 shadow-[0_0_10px_rgba(255,136,0,0.25)] bg-[#1a120b]/70 backdrop-blur-sm">
             <table className="w-full border-collapse text-sm text-amber-100">
               <thead className="bg-black/40 text-amber-400 uppercase text-[11px] tracking-wide border-b border-amber-500/20">
@@ -104,14 +98,15 @@ export default function EventsView({
                   <th className="py-3 px-5 text-left">Type</th>
                   <th className="py-3 px-5 text-left">User</th>
                   <th className="py-3 px-5 text-left">Status</th>
-                  <th className="py-3 px-5 text-left">Reason</th>
-                  <th className="py-3 px-5 text-left">Channel</th>
                   <th className="py-3 px-5 text-right">Amount</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((e: any, i) => (
-                  <tr key={i} className="border-t border-amber-500/10 hover:bg-[#1a120b]/40 transition-all duration-200">
+                {paged.map((e, i) => (
+                  <tr
+                    key={i}
+                    className="border-t border-amber-500/10 hover:bg-[#1a120b]/40 transition-all duration-200"
+                  >
                     <td className="py-3 px-5 text-amber-200/80 font-mono text-xs">
                       {new Date(e.occurredAt).toLocaleString('en-US', {
                         month: 'short',
@@ -122,26 +117,24 @@ export default function EventsView({
                       })}
                     </td>
                     <td>
-                      <span className={`type-badge type-${e.type}`}>{String(e.type).replace(/_/g, ' ')}</span>
+                      <span className={`type-badge type-${e.type}`}>
+                        {String(e.type).replace(/_/g, ' ')}
+                      </span>
                     </td>
-                    <td className="px-5">{e.user?.email || e.userEmail || e.user?.whopUserId || e.whopUserId || '-'}</td>
+                    <td className="px-5">{e.userEmail || e.userId || ''}</td>
                     <td className="px-5">
-                      {e.recovered ? (
-                        <span className="badge badge-success">Recovered</span>
+                      {e.type === 'payment_failed' ? (
+                        <span className="badge badge-danger">FAILED</span>
+                      ) : e.type === 'payment_succeeded' ? (
+                        <span className="badge badge-success">SUCCESS</span>
                       ) : (
-                        <span className="badge badge-danger">Failed</span>
+                        <span className="badge badge-neutral">CANCELED</span>
                       )}
                     </td>
-                    <td className="px-5">
-                      {e.reason ? (
-                        <span className="badge badge-neutral">{e.reason}</span>
-                      ) : (
-                        <span className="text-gray-500">-</span>
-                      )}
-                    </td>
-                    <td className="px-5 font-semibold capitalize text-amber-200/90">{e.channel || '-'}</td>
                     <td className="px-5 text-right text-amber-400 font-semibold">
-                      {typeof e.amountCents === 'number' ? `$${(e.amountCents / 100).toFixed(2)}` : '-'}
+                      {typeof e.amountCents === 'number'
+                        ? `$${(e.amountCents / 100).toFixed(2)}`
+                        : ''}
                     </td>
                   </tr>
                 ))}
@@ -151,28 +144,34 @@ export default function EventsView({
         ) : (
           <div className="bg-black/40 border border-amber-500/20 rounded-2xl p-16 text-center shadow-[inset_0_0_20px_rgba(255,100,0,0.1),0_8px_32px_rgba(0,0,0,0.5)]">
             <div className="text-5xl mb-4">📊</div>
-            <div className="text-2xl font-bold text-amber-100 mb-2">No events yet</div>
+            <div className="text-2xl font-bold text-amber-100 mb-2">
+              No events yet
+            </div>
             <div className="text-amber-200/70">Waiting for new activity</div>
           </div>
         )}
 
         {filtered.length > 0 && (
           <div className="flex items-center justify-center gap-4 mt-8">
-            {page > 1 && (
-              <a
-                href={`/dashboard/events?page=${page - 1}`}
-                className="px-4 py-2 bg-black/40 border border-amber-500/30 rounded-md text-amber-100 hover:bg-[#ff5500]/10 hover:border-[#ff8800] transition"
-              >
-                ← Prev
-              </a>
-            )}
-            <span className="px-4 py-2 bg-black/40 rounded-md text-amber-300/80">Page {page}</span>
-            <a
-              href={`/dashboard/events?page=${page + 1}`}
+            <button
+              onClick={() => setPage((p: number) => Math.max(1, p - 1))}
               className="px-4 py-2 bg-black/40 border border-amber-500/30 rounded-md text-amber-100 hover:bg-[#ff5500]/10 hover:border-[#ff8800] transition"
+              disabled={page === 1}
+            >
+              ← Prev
+            </button>
+
+            <span className="px-4 py-2 bg-black/40 rounded-md text-amber-300/80">
+              Page {page} / {totalPages}
+            </span>
+
+            <button
+              onClick={() => setPage((p: number) => p + 1)}
+              className="px-4 py-2 bg-black/40 border border-amber-500/30 rounded-md text-amber-100 hover:bg-[#ff5500]/10 hover:border-[#ff8800] transition"
+              disabled={page >= totalPages}
             >
               Next →
-            </a>
+            </button>
           </div>
         )}
 

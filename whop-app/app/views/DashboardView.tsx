@@ -17,58 +17,97 @@ export default function DashboardView({
   const pieChartRef = useRef<any>(null);
   const [metrics, setMetrics] = useState<null | {
     failed: number;
-    recovered: number;
-    click: number;
-    windowed: number;
-    avgRate: number;
+    recoveredTotal: number;
+    recoveryRate: number;
     totalRevenue: number;
-    clicks: number;
-    topChannel: string;
+    lostRevenue: number;
+    activeSubscribers: number;
   }>(null);
   const [prev, setPrev] = useState<null | {
     failed: number;
-    recovered: number;
-    click: number;
-    windowed: number;
-    avgRate: number;
+    recoveredTotal: number;
+    recoveryRate: number;
     totalRevenue: number;
-    clicks: number;
-    topChannel: string;
+    lostRevenue: number;
+    activeSubscribers: number;
   }>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number>(Date.now());
 
-  useEffect(() => {
-    const load = () =>
-      fetch('/api/metrics')
-        .then((r) => r.json())
-        .then(setMetrics)
-        .catch(() => void 0);
-    load();
-    const t = setInterval(load, 10000);
-    return () => clearInterval(t);
-  }, []);
-
-  useEffect(() => {
-    const load = () =>
-      fetch('/api/metrics/previous')
-        .then((r) => r.json())
-        .then(setPrev)
-        .catch(() => void 0);
-    load();
-    const t = setInterval(load, 10000);
-    return () => clearInterval(t);
-  }, []);
+  // Metrics will be computed from events (current 7d vs previous 7d)
 
   const [events, setEvents] = useState<any[]>([]);
   useEffect(() => {
     const load = () =>
       fetch('/api/events')
-        .then((r) => r.json())
-        .then(setEvents)
-        .catch(() => void 0);
+  .then((r) => r.json())
+  .then((res) => {
+    const ev = Array.isArray(res)
+      ? res
+      : Array.isArray(res?.data)
+      ? res.data
+      : [];
+    setEvents(ev);
+    setLastUpdatedAt(Date.now());
+  })
+  .catch((err) => {
+    console.error('Failed to load events:', err);
+    setEvents([]);
+  });
+
     load();
     const t = setInterval(load, 10000);
     return () => clearInterval(t);
   }, []);
+
+  // derive metrics from events
+  useEffect(() => {
+    if (!events.length) return;
+    const now = new Date();
+    const startOfThisWeek = new Date(now);
+    startOfThisWeek.setDate(now.getDate() - 6); // last 7 days window
+    startOfThisWeek.setHours(0,0,0,0);
+    const startOfPrevWeek = new Date(startOfThisWeek);
+    startOfPrevWeek.setDate(startOfPrevWeek.getDate() - 7);
+
+    const inRange = (d: string) => new Date(d) >= startOfThisWeek;
+    const inPrev = (d: string) => new Date(d) >= startOfPrevWeek && new Date(d) < startOfThisWeek;
+
+    const evThis = events.filter((e) => inRange(e.occurredAt));
+    const evPrev = events.filter((e) => inPrev(e.occurredAt));
+
+    const sum = (arr: any[], fn: (e: any)=>number) => arr.reduce((a,e)=>a+fn(e),0);
+
+    const failedThis = evThis.filter((e)=>e.type==='payment_failed');
+    const succeededThis = evThis.filter((e)=>e.type==='payment_succeeded');
+
+    // recoveredTotal: users with succeeded that had any failed before within all history
+    const failedUsers = new Set(events.filter((e)=>e.type==='payment_failed').map((e)=>e.userId));
+    const recoveredTotal = succeededThis.filter((e)=>failedUsers.has(e.userId)).length;
+    const failedCount = failedThis.length;
+    const recoveryRate = failedCount === 0 ? 0 : Math.round((recoveredTotal/failedCount)*1000)/10;
+
+    const totalRevenue = sum(succeededThis, (e)=> (typeof e.amountCents==='number'? e.amountCents:0))/100;
+
+    // lostRevenue: failed for users without any success later (in all history)
+    const successUsersAll = new Set(events.filter((e)=>e.type==='payment_succeeded').map((e)=>e.userId));
+    const lostRevenueCents = sum(failedThis.filter((e)=>!successUsersAll.has(e.userId)), (e)=> (typeof e.amountCents==='number'? e.amountCents:0));
+    const lostRevenue = lostRevenueCents/100;
+
+    // active subscribers: unique userId with success in last 30 days
+    const thirtyAgo = new Date(); thirtyAgo.setDate(thirtyAgo.getDate()-30);
+    const activeSubscribers = new Set(events.filter((e)=>e.type==='payment_succeeded' && new Date(e.occurredAt)>=thirtyAgo).map((e)=>e.userId)).size;
+
+    // prev week metrics
+    const failedPrev = evPrev.filter((e)=>e.type==='payment_failed').length;
+    const succeededPrev = evPrev.filter((e)=>e.type==='payment_succeeded');
+    const recoveredPrev = succeededPrev.filter((e)=>failedUsers.has(e.userId)).length;
+    const recoveryRatePrev = failedPrev===0?0: Math.round((recoveredPrev/failedPrev)*1000)/10;
+    const totalRevenuePrev = sum(succeededPrev, (e)=> (typeof e.amountCents==='number'? e.amountCents:0))/100;
+    const lostRevenuePrev = sum(evPrev.filter((e)=>e.type==='payment_failed' && !successUsersAll.has(e.userId)), (e)=> (typeof e.amountCents==='number'? e.amountCents:0))/100;
+
+    setMetrics({ failed: failedCount, recoveredTotal, recoveryRate, totalRevenue, lostRevenue, activeSubscribers });
+    setPrev({ failed: failedPrev, recoveredTotal: recoveredPrev, recoveryRate: recoveryRatePrev, totalRevenue: totalRevenuePrev, lostRevenue: lostRevenuePrev, activeSubscribers });
+  }, [events]);
 
   useEffect(() => {
 
@@ -78,10 +117,10 @@ export default function DashboardView({
       try {
         const Chart = (await import('chart.js/auto')).default;
         const revCanvas = document.getElementById('revenueChart') as HTMLCanvasElement | null;
-        const chanCanvas = document.getElementById('channelChart') as HTMLCanvasElement | null;
-        const pieCanvas = document.getElementById('pieChart') as HTMLCanvasElement | null;
+        const frCanvas = document.getElementById('failedRecoveredChart') as HTMLCanvasElement | null;
+        const rrCanvas = document.getElementById('recoveryRateChart') as HTMLCanvasElement | null;
 
-        if (!revCanvas || !chanCanvas || !pieCanvas) {
+        if (!revCanvas || !frCanvas || !rrCanvas) {
           console.warn('Chart canvases not found');
           return;
         }
@@ -161,96 +200,57 @@ export default function DashboardView({
           },
       });
 
-      // Channel Performance Chart from events (count recovered by channel)
-        const channelMap: Record<string, number> = {};
-        events.forEach((e) => {
-          if (e.recovered && e.channel) {
-            const ch = String(e.channel).charAt(0).toUpperCase() + String(e.channel).slice(1);
-            channelMap[ch] = (channelMap[ch] || 0) + 1;
+      // Failed vs Recovered Over Time (last 56 days)
+        const today = new Date();
+        const days: string[] = [];
+        for (let i = 55; i >= 0; i--) {
+          const d = new Date(today); d.setDate(today.getDate()-i); d.setHours(0,0,0,0);
+          days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+        }
+        const failedSeries = days.map((k)=>0);
+        const recoveredSeries = days.map((k)=>0);
+        events.forEach((e)=>{
+          const d = new Date(e.occurredAt);
+          const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          const idx = days.indexOf(key);
+          if (idx>=0) {
+            if (e.type==='payment_failed') failedSeries[idx] += 1;
+            if (e.type==='payment_succeeded') recoveredSeries[idx] += 1;
           }
         });
-        const channelLabels = Object.keys(channelMap);
-        const channelData = channelLabels.map((ch) => channelMap[ch] || 0);
-      const channelColors = ['#ff5500', '#f97316', '#fbbf24', '#ffb347', '#dc2626', '#f59e0b'];
-
-        barChartRef.current = new Chart(chanCanvas, {
-        type: 'bar',
-        data: {
-            labels: channelLabels,
+        const frLabels = days.map((date)=>{
+          const d = new Date(date);
+          return d.toLocaleDateString('en-US',{ month:'short', day:'numeric'});
+        });
+        barChartRef.current = new Chart(frCanvas, {
+          type: 'line',
+          data: {
+            labels: frLabels,
             datasets: [
-              {
-            label: 'Recoveries',
-                data: channelData,
-            backgroundColor: channelLabels.map((_, i) => channelColors[i % channelColors.length]),
-            borderColor: channelLabels.map((_, i) => channelColors[i % channelColors.length]),
-            borderWidth: 2,
-            borderRadius: 8,
-              },
+              { label: 'Failed', data: failedSeries, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.2)', fill: true, tension: 0.35 },
+              { label: 'Recovered', data: recoveredSeries, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.2)', fill: true, tension: 0.35 },
             ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-              legend: { display: false },
-            tooltip: {
-              backgroundColor: 'rgba(10, 11, 14, 0.98)',
-              titleColor: '#f8fafc',
-              bodyColor: '#cbd5e1',
-              },
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-                grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                ticks: { color: '#94a3b8', stepSize: 1 },
-            },
-            x: {
-                grid: { display: false },
-                ticks: { color: '#94a3b8' },
-              },
-            },
-          },
-      });
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true }, tooltip: { backgroundColor: 'rgba(10,11,14,0.98)', titleColor:'#f8fafc', bodyColor:'#cbd5e1' }}, scales: { x: { ticks: { color:'#94a3b8'}}, y: { beginAtZero:true, ticks:{ color:'#94a3b8'}, grid:{ color: 'rgba(255,255,255,0.05)'}}}}
+        });
 
-      // Recovery by Channel Pie Chart (same data as bar)
-        const pieLabels = channelLabels;
-        const pieData = channelData;
-      const pieColors = pieLabels.map((_, i) => channelColors[i % channelColors.length]);
-
-        pieChartRef.current = new Chart(pieCanvas, {
-        type: 'doughnut',
-        data: {
-          labels: pieLabels,
-            datasets: [
-              {
-            data: pieData,
-            backgroundColor: pieColors,
-            borderColor: '#0a0a0a',
-            borderWidth: 3,
-              },
-            ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: {
-                color: '#cbd5e1',
-                  font: { size: 12 },
-                padding: 15,
-                usePointStyle: true,
-                },
-            },
-            tooltip: {
-              backgroundColor: 'rgba(15, 17, 21, 0.98)',
-              titleColor: '#f8fafc',
-              bodyColor: '#cbd5e1',
-              },
-            },
-          },
+      // Recovery Rate by Week (last 8 weeks)
+        const weekRates: number[] = [];
+        const weekLabels: string[] = [];
+        const start = new Date(today); start.setDate(today.getDate()-55); start.setHours(0,0,0,0);
+        for (let w=0; w<8; w++) {
+          const ws = new Date(start); ws.setDate(start.getDate()+w*7);
+          const we = new Date(ws); we.setDate(ws.getDate()+7);
+          const evW = events.filter((e)=> new Date(e.occurredAt)>=ws && new Date(e.occurredAt)<we);
+          const f = evW.filter((e)=>e.type==='payment_failed').length;
+          const r = evW.filter((e)=>e.type==='payment_succeeded').length;
+          weekRates.push(f===0?0: Math.round((r/f)*1000)/10);
+          weekLabels.push(`${ws.toLocaleDateString('en-US',{month:'short', day:'numeric'})}`);
+        }
+        pieChartRef.current = new Chart(rrCanvas, {
+          type: 'bar',
+          data: { labels: weekLabels, datasets: [{ label: 'Recovery Rate (%)', data: weekRates, backgroundColor: '#f59e0b', borderRadius: 8 }] },
+          options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'rgba(15,17,21,0.98)', titleColor:'#f8fafc', bodyColor:'#cbd5e1'}}, scales:{ y:{ beginAtZero:true, ticks:{ color:'#94a3b8', callback:(v)=>`${v}%` }, grid:{ color:'rgba(255,255,255,0.05)'}}, x:{ ticks:{ color:'#94a3b8'}, grid:{ display:false }}}}
         });
       } catch (error) {
         console.error('Failed to load charts:', error);
@@ -262,13 +262,11 @@ export default function DashboardView({
   }, [events]);
 
   const failedV = metrics?.failed ?? 0;
-  const recoveredTotalV = metrics?.recovered ?? 0;
-  const recoveredByClickV = metrics?.click ?? 0;
-  const recoveredByWindowV = metrics?.windowed ?? 0;
-  const recoveryRateV = metrics ? String(metrics.avgRate) : '0';
-  const topChannelV = metrics?.topChannel ?? '—';
+  const recoveredTotalV = metrics?.recoveredTotal ?? 0;
+  const recoveryRateV = metrics ? String(metrics.recoveryRate) : '0';
   const revenueCentsV = metrics ? Math.round(metrics.totalRevenue * 100) : 0;
-  const clicksCountV = metrics?.clicks ?? 0;
+  const lostRevenueV = metrics?.lostRevenue ?? 0;
+  const activeSubsV = metrics?.activeSubscribers ?? 0;
   
   const pct = (cur: number, p: number) => {
     const denom = Math.max(p, 1);
@@ -329,16 +327,14 @@ export default function DashboardView({
             <button
               type="button"
               onClick={() => {
-        const csvData = [
+                const csvData = [
           ['Metric', 'Value'],
           ['Failed Payments', failedV],
                   ['Recovered Total', recoveredTotalV],
-                  ['Recovered by Click', recoveredByClickV],
-                  ['Recovered by Window', recoveredByWindowV],
-                  ['Average Recovery Rate', `${recoveryRateV}%`],
-                  ['Top Channel', topChannelV],
+                  ['Recovery Rate', `${recoveryRateV}%`],
                   ['Total Revenue', `$${(revenueCentsV / 100).toFixed(2)}`],
-                  ['Total Clicks Tracked', clicksCountV],
+                  ['Lost Revenue', `$${lostRevenueV.toFixed(2)}`],
+                  ['Active Subscribers (30d)', activeSubsV],
                 ];
                 const csvContent = csvData
                   .map((row) =>
@@ -370,6 +366,7 @@ export default function DashboardView({
             </button>
           </div>
         </form>
+        <div className="text-xs text-gray-400 mb-4">Updated {Math.max(0, Math.round((Date.now()-lastUpdatedAt)/1000))} seconds ago</div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
           <MetricCard
@@ -383,47 +380,31 @@ export default function DashboardView({
             label="Recovered Total"
             value={recoveredTotalV}
             variant="gradient-2"
-            trend={trendStr(metrics?.recovered, prev?.recovered)}
+            trend={trendStr(metrics?.recoveredTotal, prev?.recoveredTotal)}
           />
           <MetricCard
-            label="Recovered by Click"
-            value={recoveredByClickV}
-            variant="gradient-3"
-            trend={trendStr(metrics?.click, prev?.click)}
-          />
-          <MetricCard
-            label="Recovered by Window"
-            value={recoveredByWindowV}
-            variant="gradient-4"
-            trend={trendStr(metrics?.windowed, prev?.windowed)}
-          />
-          <MetricCard
-            label="Average Recovery Rate"
-            value={`${recoveryRateV}%`}
+            label="Recovery Rate"
+            value={`${recoveryRateV}%`
+            }
             variant="gradient-2"
-            trend={trendStr(Number(recoveryRateV), prev?.avgRate)}
+            trend={trendStr(Number(recoveryRateV), prev?.recoveryRate)}
           />
-          <MetricCard label="Top Channel" value={topChannelV} variant="gradient-5" />
           <MetricCard
             label="Total Revenue"
             value={`$${(revenueCentsV / 100).toFixed(2)}`}
             variant="gradient-6"
             trend={trendStr(metrics?.totalRevenue, prev?.totalRevenue)}
           />
-          <MetricCard
-            label="Total Clicks Tracked"
-            value={clicksCountV}
-            variant="gradient-3"
-            trend={trendStr(metrics?.clicks, prev?.clicks)}
-          />
+          <MetricCard label="Lost Revenue" value={`$${lostRevenueV.toFixed(2)}`} variant="gradient-3" trend={trendStr(metrics?.lostRevenue, prev?.lostRevenue)} />
+          <MetricCard label="Active Subscribers" value={activeSubsV} variant="gradient-5" trend={trendStr(metrics?.activeSubscribers, prev?.activeSubscribers)} />
 
 
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <ChartCard title="Revenue Over Time" id="revenueChart" />
-          <ChartCard title="Channel Performance" id="channelChart" />
-          <ChartCard title="Recovery by Channel" id="pieChart" />
+          <ChartCard title="Failed vs Recovered Over Time" id="failedRecoveredChart" />
+          <ChartCard title="Recovery Rate by Week" id="recoveryRateChart" />
         </div>
       </div>
 

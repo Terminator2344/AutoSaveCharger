@@ -11,8 +11,15 @@ interface LayoutProps {
 
 export default function Layout({ devMode, children }: LayoutProps) {
   const pathname = usePathname();
-  const isDashboard = pathname?.startsWith('/dashboard') || pathname === '/';
-  const isEvents = pathname?.startsWith('/events');
+  const isInExperiences = pathname?.includes('/experiences/');
+  const experienceIdMatch = pathname?.match(/\/experiences\/([^\/]+)/);
+  const experienceId = experienceIdMatch ? experienceIdMatch[1] : null;
+  
+  const isDashboard = pathname?.startsWith('/dashboard') || pathname?.includes('/dashboard') || pathname === '/';
+  const isEvents = pathname?.startsWith('/events') || pathname?.includes('/events');
+  
+  const dashboardHref = isInExperiences && experienceId ? `/experiences/${experienceId}/dashboard` : '/dashboard';
+  const eventsHref = isInExperiences && experienceId ? `/experiences/${experienceId}/events` : '/events';
 
   return (
     <>
@@ -23,7 +30,7 @@ export default function Layout({ devMode, children }: LayoutProps) {
           </div>
           <nav className="flex gap-2 text-sm font-semibold">
             <Link
-              href="/dashboard"
+              href={dashboardHref}
               className={`px-4 py-2 rounded-lg transition-all duration-300 ${
                 isDashboard
                   ? 'text-[#ffcc66] bg-gradient-to-r from-[#ff5500]/30 to-[#ff8800]/30 border border-[#ff5500]/50 shadow-[0_0_15px_rgba(255,85,0,0.4)] hover:shadow-[0_0_25px_rgba(255,136,0,0.6)] hover:border-[#ff8800]'
@@ -33,7 +40,7 @@ export default function Layout({ devMode, children }: LayoutProps) {
               Dashboard
             </Link>
             <Link
-              href="/events"
+              href={eventsHref}
               className={`px-4 py-2 rounded-lg transition-all duration-300 ${
                 isEvents
                   ? 'text-[#ffcc66] bg-gradient-to-r from-[#ff5500]/30 to-[#ff8800]/30 border border-[#ff5500]/50 shadow-[0_0_15px_rgba(255,85,0,0.4)] hover:shadow-[0_0_25px_rgba(255,136,0,0.6)] hover:border-[#ff8800]'

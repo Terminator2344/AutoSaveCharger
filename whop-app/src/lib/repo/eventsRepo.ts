@@ -72,6 +72,7 @@ export async function findManyEvents(options: {
   orderBy?: { field: string; direction: 'asc' | 'desc' };
   take?: number;
   where?: {
+    userId?: string;
     type?: string;
     recovered?: boolean;
     reason?: string;
@@ -83,6 +84,7 @@ export async function findManyEvents(options: {
 
   // Apply filters
   if (options.where) {
+    if (options.where.userId) query = query.eq('userId', options.where.userId);
     if (options.where.type) query = query.eq('type', options.where.type);
     if (options.where.recovered !== undefined) query = query.eq('recovered', options.where.recovered);
     if (options.where.reason) query = query.eq('reason', options.where.reason);
@@ -120,6 +122,7 @@ export async function findManyEvents(options: {
 }
 
 export async function countEvents(where: {
+  userId?: string;
   type?: string;
   recovered?: boolean;
   reason?: string;
@@ -127,6 +130,7 @@ export async function countEvents(where: {
 }) {
   let query = supabaseAdmin.from('event').select('*', { count: 'exact', head: true });
 
+  if (where.userId) query = query.eq('userId', where.userId);
   if (where.type) query = query.eq('type', where.type);
   if (where.recovered !== undefined) query = query.eq('recovered', where.recovered);
   if (where.reason) query = query.eq('reason', where.reason);
@@ -146,11 +150,13 @@ export async function countEvents(where: {
 }
 
 export async function aggregateEvents(where: {
+  userId?: string;
   occurredAt?: { gte?: Date; lt?: Date };
 }) {
   // Fetch and sum amountCents in JS
   let query = supabaseAdmin.from('event').select('amountCents');
 
+  if (where.userId) query = query.eq('userId', where.userId);
   if (where.occurredAt) {
     if (where.occurredAt.gte) query = query.gte('occurredAt', where.occurredAt.gte.toISOString());
     if (where.occurredAt.lt) query = query.lt('occurredAt', where.occurredAt.lt.toISOString());
