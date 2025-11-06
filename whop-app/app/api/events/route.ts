@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { findManyEvents } from '@/lib/repo/eventsRepo';
 
 export async function GET() {
-  const events = await prisma.event.findMany({
-    orderBy: { occurredAt: 'desc' },
+  const events = await findManyEvents({
+    orderBy: { field: 'occurredAt', direction: 'desc' },
     take: 100,
   });
   return NextResponse.json(events);

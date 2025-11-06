@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { countEvents, aggregateEvents, groupByChannel } from '@/lib/repo/eventsRepo'
+import { countClicks } from '@/lib/repo/clicksRepo'
 import { startOfWeek, subDays } from 'date-fns'
 
 export async function GET() {
@@ -8,38 +9,29 @@ export async function GET() {
   const startOfPrevWeek = subDays(startOfThisWeek, 7)
 
   const [failed, recovered, click, windowed, totalRevenueAgg, clicks] = await Promise.all([
-    prisma.event.count({
-      where: {
-        type: 'payment_failed',
-        occurredAt: { gte: startOfPrevWeek, lt: startOfThisWeek },
-      },
+    countEvents({
+      type: 'payment_failed',
+      occurredAt: { gte: startOfPrevWeek, lt: startOfThisWeek },
     }),
-    prisma.event.count({
-      where: {
-        recovered: true,
-        occurredAt: { gte: startOfPrevWeek, lt: startOfThisWeek },
-      },
+    countEvents({
+      recovered: true,
+      occurredAt: { gte: startOfPrevWeek, lt: startOfThisWeek },
     }),
-    prisma.event.count({
-      where: {
-        recovered: true,
-        reason: 'click',
-        occurredAt: { gte: startOfPrevWeek, lt: startOfThisWeek },
-      },
+    countEvents({
+      recovered: true,
+      reason: 'click',
+      occurredAt: { gte: startOfPrevWeek, lt: startOfThisWeek },
     }),
-    prisma.event.count({
-      where: {
-        recovered: true,
-        reason: 'window',
-        occurredAt: { gte: startOfPrevWeek, lt: startOfThisWeek },
-      },
+    countEvents({
+      recovered: true,
+      reason: 'window',
+      occurredAt: { gte: startOfPrevWeek, lt: startOfThisWeek },
     }),
-    prisma.event.aggregate({
-      _sum: { amountCents: true },
-      where: { occurredAt: { gte: startOfPrevWeek, lt: startOfThisWeek } },
+    aggregateEvents({
+      occurredAt: { gte: startOfPrevWeek, lt: startOfThisWeek },
     }),
-    prisma.click.count({
-      where: { clickedAt: { gte: startOfPrevWeek, lt: startOfThisWeek } },
+    countClicks({
+      clickedAt: { gte: startOfPrevWeek, lt: startOfThisWeek },
     }),
   ])
 
@@ -47,15 +39,9 @@ export async function GET() {
   const avgRate =
     failed + recovered === 0 ? 0 : Math.round((recovered / (failed + recovered)) * 1000) / 10
 
-  const topChannelGroup = await prisma.event.groupBy({
-    by: ['channel'],
-    _count: { channel: true },
-    orderBy: { _count: { channel: 'desc' } },
-    take: 1,
-    where: {
-      channel: { not: null },
-      occurredAt: { gte: startOfPrevWeek, lt: startOfThisWeek },
-    },
+  const topChannelGroup = await groupByChannel({
+    channel: { not: null },
+    occurredAt: { gte: startOfPrevWeek, lt: startOfThisWeek },
   })
 
   return NextResponse.json({

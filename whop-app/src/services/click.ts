@@ -1,7 +1,13 @@
-import { db, insert, findOne } from "@/lib/db";
+import { createClick } from '@/lib/repo/clicksRepo';
+import { findManyEvents } from '@/lib/repo/eventsRepo';
 
 export async function recordClick({ userId, channel, messageId }: any) {
-  return insert("clicks", { id: Date.now().toString(), userId, channel, messageId, clickedAt: new Date() });
+  return createClick({
+    userId,
+    channel: channel || 'unknown',
+    messageId: messageId || null,
+    clickedAt: new Date().toISOString(),
+  });
 }
 
 // Stub with positional args (for compatibility with other imports)
@@ -10,7 +16,17 @@ export async function recordClickPositional(userId: string, channel: string, mes
 }
 
 export async function getLastFailedEvent(userId: string) {
-  return findOne("events", (e) => e.userId === userId && e.type.includes("failed"));
+  const events = await findManyEvents({
+    where: {
+      type: 'payment_failed',
+    },
+    orderBy: { field: 'occurredAt', direction: 'desc' },
+    take: 1,
+  });
+  
+  // Filter by userId if available
+  const userEvents = events.filter((e) => e.userId === userId || e.whopUserId === userId);
+  return userEvents[0] || null;
 }
 
 // Stub deriveBillingRedirect expected by some routes

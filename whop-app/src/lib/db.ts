@@ -1,26 +1,26 @@
-export const db = {
-  users: [] as any[],
-  events: [] as any[],
-  notifications: [] as any[],
-  clicks: [] as any[],
-};
+import { createClient } from '@supabase/supabase-js';
 
-export function insert(table: keyof typeof db, record: any) {
-  db[table].push(record);
-  return record;
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
+
+if (!supabaseUrl) {
+  throw new Error('Missing SUPABASE_URL environment variable');
 }
 
-export function findMany(table: keyof typeof db, filter: (item: any) => boolean) {
-  return db[table].filter(filter);
+if (!supabaseServiceRoleKey) {
+  throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
 }
 
-export function findOne(table: keyof typeof db, filter: (item: any) => boolean) {
-  return db[table].find(filter);
-}
+// Admin client with full permissions (for server-side operations)
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
 
-export function update(table: keyof typeof db, filter: (item: any) => boolean, updateFn: (item: any) => void) {
-  const item = db[table].find(filter);
-  if (item) updateFn(item);
-  return item;
-}
-
+// Public client (for client-side safe read operations if needed)
+export const supabase = supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : supabaseAdmin;

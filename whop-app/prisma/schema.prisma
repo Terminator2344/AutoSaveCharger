@@ -1,24 +1,46 @@
-// Prisma schema for Auto-Charge Saver analytics
-
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "client"        // ✅ включаем JS-движок (без Rust бинарников)
+  output     = "../generated/prisma/client"
+}
+
+model User {
+  id         String   @id
+  email      String?  @unique
+  tgUserId   String?
+  discordId  String?
+  createdAt  DateTime @default(now())
+}
+
 model Event {
-  id           String   @id @default(cuid())
-  type         String   // payment_failed, payment_succeeded, payment_recovered
-  occurredAt   DateTime @default(now())
-  userEmail    String?
-  whopUserId   String?
-  recovered    Boolean  @default(false)
-  reason       String?
-  channel      String?
-  amountCents  Int?
+  id             String   @id @default(cuid())
+  whopEventId    String   @unique
+  type           String
+  userId         String?
+  subscriptionId String?
+  email          String?
+  status         String?
+  occurredAt     DateTime
+  recovered      Boolean  @default(false)
+  reason         String?
+  meta           Json?
+  createdAt      DateTime @default(now())
+}
+
+model Notification {
+  id             String   @id @default(cuid())
+  userId         String?
+  subscriptionId String?
+  channel        String
+  messageId      String?
+  status         String
+  error          String?
+  createdAt      DateTime @default(now())
 }
 
 model Click {
@@ -28,18 +50,3 @@ model Click {
   messageId  String?
   clickedAt  DateTime @default(now())
 }
-
-model MetricSnapshot {
-  id               String   @id @default(cuid())
-  createdAt        DateTime @default(now())
-  failed           Int
-  recovered        Int
-  recoveredClick   Int
-  recoveredWindow  Int
-  avgRecovery      Float
-  totalRevenue     Int
-  totalClicks      Int
-  topChannel       String?
-}
-
-

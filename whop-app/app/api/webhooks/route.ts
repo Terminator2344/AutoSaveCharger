@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { insert } from "@/lib/db";
+import { supabaseAdmin } from "@/lib/db";
+
 import { notifyPaymentFailed, markRecoveredOnSuccess } from "@/services/notifications";
 
 export async function POST(req: Request) {
@@ -7,15 +8,28 @@ export async function POST(req: Request) {
   const type = body.type;
   const data = body.data || {};
 
-  const event = insert("events", {
-    id: body.id || Date.now().toString(),
-    type,
-    userId: data.user_id,
-    subscriptionId: data.subscription_id,
-    email: data.email,
-    billing_url: data.billing_url,
-    occurredAt: new Date(),
-  });
+  const { data: event, error } = await supabaseAdmin
+  .from("event")
+  .insert([
+    {
+      id: body.id || Date.now().toString(),
+      type,
+      userId: data.user_id,
+      subscriptionId: data.subscription_id,
+      email: data.email,
+      billingUrl: data.billing_url,
+      occurredAt: new Date(),
+    },
+  ])
+  .select("*")
+  .single();
+
+if (error) {
+  console.error("❌ Failed to insert event:", error.message);
+  throw error;
+}
+
+console.log("✅ Event inserted successfully:", event);
 
   if (type.includes("failed")) {
     await notifyPaymentFailed({
