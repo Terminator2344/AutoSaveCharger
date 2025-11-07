@@ -1,7 +1,8 @@
-import { sendEmail } from '@/src/integrations/email'
-import { sendTelegram } from '@/src/integrations/telegram'
-import { sendDiscord } from '@/src/integrations/discord'
-import { env } from '@/src/config/env'
+import { sendEmail } from '../integrations/email'
+import { sendTelegram } from '../integrations/telegram'
+import { sendDiscord } from '../integrations/discord'
+import { env } from '../config/env'
+
 
 type NotifyInput = {
   userId?: string
