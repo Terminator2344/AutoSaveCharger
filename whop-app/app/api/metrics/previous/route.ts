@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { whopsdk } from '@/lib/whop-sdk'
-import { countEvents, aggregateEvents } from '@/lib/repo/eventsRepo'
+import { countEvents, aggregateEvents } from '@/src/lib/repo/eventsRepo'
 import { startOfWeek, subDays } from 'date-fns'
 
 export async function GET() {

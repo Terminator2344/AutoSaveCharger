@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers'
 import { whopsdk } from '@/lib/whop-sdk'
-import { findManyEvents } from '@/lib/repo/eventsRepo';
+import { findManyEvents } from '@/src/lib/repo/eventsRepo';
 
 export async function GET() {
   try {

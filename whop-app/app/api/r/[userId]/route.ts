@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { recordClick, getLastFailedEvent, deriveBillingRedirect } from "@/services/click";
+import { recordClick, getLastFailedEvent, deriveBillingRedirect } from "@/src/services/click";
 
 export async function GET(req: Request, { params }: any) {
   const { userId } = params;

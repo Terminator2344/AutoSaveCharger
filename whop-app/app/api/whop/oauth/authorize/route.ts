@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { env } from '@/config/env';
+import { env } from '@/src/config/env';
 
 export async function GET() {
   // TODO: добавить реальную авторизацию Whop SDK при необходимости

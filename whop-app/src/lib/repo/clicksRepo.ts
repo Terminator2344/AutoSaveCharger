@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/db';
+import { supabaseAdmin } from '@/src/lib/db';
 
 export interface ClickRow {
   id?: string;

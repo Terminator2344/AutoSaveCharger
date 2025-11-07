@@ -2,7 +2,7 @@
 // TODO: Wire real endpoints per docs/whop files when credentials are available.
 
 import { createHmac, timingSafeEqual } from 'node:crypto'
-import { env } from '@/src/config/env'
+import { env } from '../config/env'
 
 export type WhopOAuthToken = {
   access_token: string
