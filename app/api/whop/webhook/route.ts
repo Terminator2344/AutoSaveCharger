@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyWebhookSignature } from '@/src/services/whop'
 import { PrismaClient } from '@prisma/client'
-import { markRecoveryIfClickedRecently } from '@/src/services/click'
+import { verifyWebhookSignature } from '@/services/whop'
+import { markRecoveryIfClickedRecently } from '@/services/click'
+
 
 const prisma = new PrismaClient()
 
