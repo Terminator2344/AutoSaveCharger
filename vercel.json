@@ -1,6 +1,7 @@
 {
   "buildCommand": "npm run build",
   "framework": "nextjs",
-  "rootDirectory": "whop-app"
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "cleanUrls": true
 }
-
