@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
-import type { WhopOAuthToken } from '@/src/services/whop'
+import type { WhopOAuthToken } from './whop'
+
 
 const prisma = new PrismaClient()
 
