@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/src/lib/db';
+import { supabaseAdmin } from '../lib/db';
 
 export async function notifyPaymentFailed({ user, subscriptionId, billingUrl }: any) {
   // Store notification record in Supabase (if Notification table exists)

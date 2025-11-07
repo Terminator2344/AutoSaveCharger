@@ -1,33 +1,66 @@
-import { NextResponse } from 'next/server'
-import { headers } from 'next/headers'
-import { whopsdk } from '@/lib/whop-sdk'
-import { countEvents, aggregateEvents } from '@/src/lib/repo/eventsRepo'
-import { startOfWeek } from 'date-fns'
+import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
+import { whopsdk } from '@/lib/whop-sdk';
+import { supabaseAdmin } from '../../../src/lib/db';
+import { startOfWeek } from 'date-fns';
 
 export async function GET() {
   try {
-    const user = await whopsdk.verifyUserToken(await headers())
-    if (!user?.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const h = await headers();
+    let userId: string | null = null;
 
-    const now = new Date()
-    const startOfThisWeek = startOfWeek(now, { weekStartsOn: 1 })
+    try {
+      const user = await whopsdk.verifyUserToken(h);
+      userId = user?.userId ?? null;
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    const [failed, recovered, totalRevenueAgg] = await Promise.all([
-      countEvents({ userId: user.userId, type: 'payment_failed', occurredAt: { gte: startOfThisWeek } }),
-      countEvents({ userId: user.userId, type: 'payment_succeeded', occurredAt: { gte: startOfThisWeek } }),
-      aggregateEvents({ userId: user.userId, occurredAt: { gte: startOfThisWeek } }),
-    ])
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    const totalAmountCents = totalRevenueAgg._sum.amountCents || 0
-    const avgRate = failed + recovered === 0 ? 0 : Math.round((recovered / (failed + recovered)) * 1000) / 10
+    const now = new Date();
+    const startOfThisWeek = startOfWeek(now, { weekStartsOn: 1 });
+
+    // Direct Supabase queries
+    const [failedRes, succeededRes, revenueRes] = await Promise.all([
+      supabaseAdmin
+        .from('event')
+        .select('*', { count: 'exact', head: true })
+        .eq('userId', userId)
+        .eq('type', 'payment_failed')
+        .gte('occurredAt', startOfThisWeek.toISOString()),
+      supabaseAdmin
+        .from('event')
+        .select('*', { count: 'exact', head: true })
+        .eq('userId', userId)
+        .eq('type', 'payment_succeeded')
+        .gte('occurredAt', startOfThisWeek.toISOString()),
+      supabaseAdmin
+        .from('event')
+        .select('amountCents')
+        .eq('userId', userId)
+        .gte('occurredAt', startOfThisWeek.toISOString()),
+    ]);
+
+    const failed = failedRes.count || 0;
+    const recovered = succeededRes.count || 0;
+    const totalAmountCents = (revenueRes.data || []).reduce((sum: number, row: any) => {
+      const amount = typeof row.amountCents === 'number' ? row.amountCents : Number(row.amountcents || 0);
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
+
+    const avgRate = failed + recovered === 0 ? 0 : Math.round((recovered / (failed + recovered)) * 1000) / 10;
 
     return NextResponse.json({
       failed,
       recovered,
       avgRate,
       totalRevenue: totalAmountCents / 100,
-    })
-  } catch {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    });
+  } catch (error) {
+    console.error('Error fetching metrics:', error);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 }

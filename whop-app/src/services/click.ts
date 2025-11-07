@@ -1,5 +1,5 @@
-import { createClick } from '@/src/lib/repo/clicksRepo';
-import { findManyEvents } from '@/src/lib/repo/eventsRepo';
+import { createClick } from '../lib/repo/clicksRepo';
+import { findManyEvents } from '../lib/repo/eventsRepo';
 
 export async function recordClick({ userId, channel, messageId }: any) {
   return createClick({

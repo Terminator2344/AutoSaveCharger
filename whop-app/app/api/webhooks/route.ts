@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/src/lib/db";
-
-import { notifyPaymentFailed, markRecoveredOnSuccess } from "@/src/services/notifications";
+import { supabaseAdmin } from "../../../src/lib/db";
+import { notifyPaymentFailed, markRecoveredOnSuccess } from "../../../src/services/notifications";
 
 export async function POST(req: Request) {
   const body = await req.json();

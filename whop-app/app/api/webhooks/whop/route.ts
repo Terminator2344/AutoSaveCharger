@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createEvent } from '@/src/lib/repo/eventsRepo';
-import { sendTelegram } from '@/src/integrations/telegram';
-import { sendDiscord } from '@/src/integrations/discord';
-import { sendEmail, buildPaymentEmailHtml } from '@/src/integrations/email';
-
-import { sendTelegramAnimation } from '@/src/integrations/telegram';
+import { createEvent } from '../../../../src/lib/repo/eventsRepo';
+import { sendTelegram } from '../../../../src/integrations/telegram';
+import { sendDiscord } from '../../../../src/integrations/discord';
+import { sendEmail, buildPaymentEmailHtml } from '../../../../src/integrations/email';
+import { sendTelegramAnimation } from '../../../../src/integrations/telegram';
 
 
 export async function POST(req: Request) {

@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/src/lib/db';
+import { supabaseAdmin } from '../db';
 
 export interface EventRow {
   id?: string;
