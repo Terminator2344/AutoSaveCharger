@@ -34,5 +34,10 @@ export async function deriveBillingRedirect(userId: string) {
   const mockBillingUrl = "https://whop.com/billing";
   return mockBillingUrl;
 }
+export async function markRecoveryIfClickedRecently(userId: string) {
+  console.log(`[markRecoveryIfClickedRecently] checking recovery for user ${userId}`);
+  // здесь можно позже добавить реальную логику проверки кликов
+  return true;
+}
 
 
