@@ -1,8 +1,7 @@
 {
   "framework": "nextjs",
-  "rootDirectory": "whop-app",
-  "installCommand": "npm install",
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
+  "installCommand": "cd whop-app && npm install",
+  "buildCommand": "cd whop-app && npm run build",
+  "outputDirectory": "whop-app/.next",
   "cleanUrls": true
 }
