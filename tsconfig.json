@@ -1,28 +1,16 @@
 {
-  "extends": "./whop-app/tsconfig.json",
   "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["esnext"],
     "strict": true,
-    "noEmit": true,
     "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "baseUrl": "./whop-app",
-    "paths": {
-      "@/*": ["*"],
-      "@/lib/*": ["lib/*"],
-      "@/app/*": ["app/*"],
-      "@/src/*": ["src/*"]
-    },
-    "plugins": [{ "name": "next" }]
+    "types": ["node"]
   },
-  "include": ["whop-app"],
+  "include": ["scripts/**/*.ts"],
   "exclude": ["node_modules"]
 }
