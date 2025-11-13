@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { whopsdk } from '@/lib/whop-sdk';
-import { supabaseAdmin } from '../../../../src/lib/db';
+import { supabaseAdmin } from '@/lib/db';
 import { startOfWeek, subDays } from 'date-fns';
 
 export async function GET() {

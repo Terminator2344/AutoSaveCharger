@@ -17,20 +17,17 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    // ✅ Главное: теперь алиасы резолвятся внутри whop-app/
     "baseUrl": "./",
     "paths": {
       "@/*": [
-        "*"
+        "src/*"
       ],
       "@/app/*": [
         "app/*"
       ],
       "@/lib/*": [
-        "lib/*"
-      ],
-      "@/src/*": [
-        "src/*"
+        "lib/*",
+        "src/lib/*"
       ],
       "@/config/*": [
         "src/config/*"
@@ -42,6 +39,10 @@
         "src/services/*"
       ]
     },
+    "types": [
+      "node",
+      "next"
+    ],
     "plugins": [
       {
         "name": "next"
@@ -53,9 +54,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    ".next\\dev/types/**/*.ts",
-    ".next\\dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

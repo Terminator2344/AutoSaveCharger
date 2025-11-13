@@ -90,9 +90,9 @@ npm run dev
 
 Если нужно вернуться к Prisma:
 
-1. Все Prisma файлы сохранены (`prisma/schema.prisma`, `src/lib/prisma.ts`)
-2. Prisma зависимости остались в `package.json`
-3. Просто верните импорты в API роутах обратно на `prisma`
+1. Prisma схема сохранена в `whop-app/prisma/schema.prisma` (можно использовать при необходимости отката)
+2. Prisma зависимости остаются в `package.json`
+3. Для возврата к Prisma восстановите соответствующие импорты в API-роутах
 
 ## Проверочный список
 
